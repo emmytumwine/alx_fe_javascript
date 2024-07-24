@@ -6,11 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const importInput = document.getElementById('importFile');
     const categoryFilter = document.getElementById('categoryFilter');
 
-    let quotes = JSON.parse(localStorage.getItem('quotes')) || [
-        { text: "The only limit to our realization of tomorrow is our doubts of today.", category: "Motivational" },
-        { text: "Life is 10% what happens to us and 90% how we react to it.", category: "Inspirational" },
-        { text: "Good friends, good books, and a sleepy conscience: this is the ideal life.", category: "Friendship" }
-    ];
+    let quotes = JSON.parse(localStorage.getItem('quotes')) || [];
 
     // Show a random quote
     function showRandomQuote() {
@@ -36,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showRandomQuote();
             document.getElementById('newQuoteText').value = '';
             document.getElementById('newQuoteCategory').value = '';
+            syncWithServer(); // Sync with server after adding a quote
         } else {
             alert('Please enter both quote text and category.');
         }
@@ -109,6 +106,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Sync with the server
+    async function syncWithServer() {
+        try {
+            // Fetch quotes from the server
+            const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+            const serverQuotes = await response.json();
+            
+            // Merge server quotes with local quotes
+            const updatedQuotes = [...quotes, ...serverQuotes];
+            quotes = Array.from(new Set(updatedQuotes.map(q => JSON.stringify(q)))).map(q => JSON.parse(q)); // Remove duplicates
+            
+            saveQuotes(); // Save updated quotes to local storage
+            updateCategoryFilter(); // Update category filter
+            showRandomQuote(); // Show a random quote
+            alert('Data synced with server.');
+        } catch (error) {
+            console.error('Error syncing with server:', error);
+            alert('Failed to sync with server.');
+        }
+    }
+
     // Initialize
     updateCategoryFilter();
     const lastFilter = localStorage.getItem('lastFilter');
@@ -122,4 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addQuoteButton.addEventListener('click', addQuote);
     exportButton.addEventListener('click', exportQuotes);
     importInput.addEventListener('change', importFromJsonFile);
+
+    // Periodic data syncing
+    setInterval(syncWithServer, 60000); // Sync with server every 60 seconds
 });
